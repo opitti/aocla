@@ -54,39 +54,42 @@ fn typ_string(input: &str) -> Res<&str, AoType> {
         })
 }
 
-fn ao_var(input: &str) -> Res<&str, (Vec<AoType>, Option<AoType>)> {
+fn ao_var(input: &str) -> Res<&str, AoType> {
     println!("ao_var input : {}",&input);
     delimited(
         tag("("),
-        tuple((many0(terminated( ao_all, tag(" "))),
-               opt(ao_all), )),
+        tuple((many0(terminated( alphanumeric1, tag(" "))),
+               opt(alphanumeric1), )),
         tag(")")
     )
     (input).map(|(next_input, mut res)| {
         println!("ao_var next_input {:?}",&next_input);
         println!("ao_var res {:?}",&res);
+        let mut ires = Box::new(Vec::new());
         match &res.1 {
-            Some(p) => res.0.push(p.clone()),
+            Some(p) => ires.push(p.clone()),
             None => {}
         };
-        (next_input,res)
+        for v in res.0 {
+            ires.push(v.clone())
+        }
+        let ires_f = AoType::Ass(ires);
+        (next_input,ires_f)
     })
 }
 
 // 2ème étape
 fn ao_all(input: &str) -> Res<&str, AoType> {
-    alt((ao_operator,typ_string,typ_token,typ_int,))(input)
+    alt((ao_operator,ao_var,typ_string,typ_token,typ_int,))(input)
 }
 
 // 1er étape
 fn l_ao_all(input: &str) -> Res<&str, (Vec<AoType>, Option<AoType>)> {
     context(
         "l_ao_all",
-        alt (( delimited(tag("("),tuple((many0(terminated( ao_all, tag(" "))),opt(ao_all), )),tag(")"))
-        ,tuple((many0(terminated( ao_all, tag(" "))),
+        tuple((many0(terminated( ao_all, tag(" "))),
                opt(ao_all),
         )), 
-    )),
     )(input).map(|(next_input, mut res)| {
         println!("  lInteger next_input {:?}",next_input);
         println!("  lInteger res {:?}",&res);
@@ -150,7 +153,7 @@ fn main() {
     println!("AO start");
 
     //let mut i_lex4 = ao_var("12 13 'tkn \"str 1\"");
-    let mut i_lex4 = l_ao_all("('val1 'val2)");
+    let mut i_lex4 = l_ao_all("1 2 3 (v1 w1 x1) 3");
     println!("*************************************************");
     if let Err(lex4) = i_lex4{
         println!("lex4 KO");
