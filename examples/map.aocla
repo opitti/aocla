@@ -1,0 +1,17 @@
+// This is a commented version of the implementation of 'map' inside
+// the standard library.
+
+[(l f) // list and function to apply
+    $l len (e)  // Get list len in "e"
+    0 (j)       // j is our current index
+    []          // We will populate this empty list
+    [$j $e <] [
+        $l $j get@
+        $f upeval
+        swap ->
+        $j 1 + (j)
+    ] while
+] 'map def
+
+[1 2 3] [dup *] map
+printnl

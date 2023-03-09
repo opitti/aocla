@@ -1,0 +1,23 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"command": "cargo build --bin ao3",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"label": "build ao3"
+		},
+		{
+			"type": "shell",
+			"command": "cargo run --bin ao3",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"label": "run ao3"
+		}
+	]
+}
