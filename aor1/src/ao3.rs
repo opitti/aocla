@@ -20,7 +20,8 @@ pub enum  AoType<'a> {
     Str(Box<&'a str>),
     Tkn(Box<&'a str>),
     Int(Box<i32>),
-    Opr(Box<&'a str>)
+    Opr(Box<&'a str>),
+    Ass(Box<Vec<&'a str>>),
 }
 
 type Res<T, U> = IResult<T, U, VerboseError<T>>;
@@ -132,8 +133,9 @@ fn eval<'a>(lex: AoType<'a>,env:&mut Vec<AoType<'a>>, st: Rc<RefCell<Vec<AoType<
                 let op2 = v.pop().unwrap();
                 v.push(add(op1,op2));
                 AoType::Tkn(Box::new("void"))
-            }
+            },
             AoType::Opr(val)  => {AoType::Tkn(Box::new("void"))}
+            AoType::Ass(val)  => {AoType::Tkn(Box::new("void"))}
         }
 
 }
