@@ -14,6 +14,7 @@ use nom::{
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use std::collections::HashMap;
 
 #[derive(Debug,Clone)]
 pub enum  AoType<'a> {
@@ -22,6 +23,7 @@ pub enum  AoType<'a> {
     Int(Box<i32>),
     Opr(Box<&'a str>),
     Ass(Box<Vec<&'a str>>),
+    Var(Box<&'a str>),
 }
 
 type Res<T, U> = IResult<T, U, VerboseError<T>>;
@@ -66,21 +68,31 @@ fn ao_var(input: &str) -> Res<&str, AoType> {
         println!("ao_var next_input {:?}",&next_input);
         println!("ao_var res {:?}",&res);
         let mut ires = Box::new(Vec::new());
+
+        for v in res.0 {
+            ires.push(v.clone())
+        }
+
         match &res.1 {
             Some(p) => ires.push(p.clone()),
             None => {}
         };
-        for v in res.0 {
-            ires.push(v.clone())
-        }
+
         let ires_f = AoType::Ass(ires);
         (next_input,ires_f)
     })
 }
 
+fn ao_val(input: &str) -> Res<&str, AoType> {
+    pair(tag("$"),alphanumeric1)(input).map(|(next_input, mut res)| {
+        println!("ao_val : {:?}",res);
+        (next_input, AoType::Var(Box::new(res.1)))
+    })
+}
+
 // 2ème étape
 fn ao_all(input: &str) -> Res<&str, AoType> {
-    alt((ao_operator,ao_var,typ_string,typ_token,typ_int,))(input)
+    alt((ao_operator,ao_var,ao_val,typ_string,typ_token,typ_int,))(input)
 }
 
 // 1er étape
@@ -107,7 +119,7 @@ fn ao_operator(input: &str) -> Res<&str, AoType> {
         })
 }
 
-// ====================== Arithmetique function ====================
+// ==================== Arithmetique function ====================
 
 fn add<'b>(op1:AoType<'b>,op2:AoType<'b>) -> AoType<'b> {
 
@@ -116,9 +128,29 @@ fn add<'b>(op1:AoType<'b>,op2:AoType<'b>) -> AoType<'b> {
 
     AoType::Int(Box::new(*i_op1 + *i_op2))
 }
+fn sub<'b>(op1:AoType<'b>,op2:AoType<'b>) -> AoType<'b> {
 
+    let AoType::Int(i_op1) = op1 else {panic!("add op1 wrong type")};
+    let AoType::Int(i_op2) = op2 else {panic!("add op2 wrong type")};
+
+    AoType::Int(Box::new(*i_op1 - *i_op2))
+}
+fn mul<'b>(op1:AoType<'b>,op2:AoType<'b>) -> AoType<'b> {
+
+    let AoType::Int(i_op1) = op1 else {panic!("add op1 wrong type")};
+    let AoType::Int(i_op2) = op2 else {panic!("add op2 wrong type")};
+
+    AoType::Int(Box::new(*i_op1 * *i_op2))
+}
+fn div<'b>(op1:AoType<'b>,op2:AoType<'b>) -> AoType<'b> {
+
+    let AoType::Int(i_op1) = op1 else {panic!("add op1 wrong type")};
+    let AoType::Int(i_op2) = op2 else {panic!("add op2 wrong type")};
+
+    AoType::Int(Box::new(*i_op1 / *i_op2))
+}
 //fn eval<'c>(lex: AoType<'c>,env:&mut Vec<AoType<'c>>, stack:&mut Vec<AoType<'c>>) -> AoType<'c> {
-fn eval<'a>(lex: AoType<'a>,env:&mut Vec<AoType<'a>>, st: Rc<RefCell<Vec<AoType<'a>>>>) -> AoType<'a> {
+fn eval<'a>(lex: AoType<'a>,env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<Vec<AoType<'a>>>>) -> AoType<'a> {
 
     //let mut vec_ref = Rc::clone(st).borrow_mut();
     //println!("start ==> {:?}",Rc::clone(&st).borrow_mut().pop());
@@ -131,16 +163,37 @@ fn eval<'a>(lex: AoType<'a>,env:&mut Vec<AoType<'a>>, st: Rc<RefCell<Vec<AoType<
             
             AoType::Opr(val)  => {
                 //AoType::Tkn(Box::new("void"));
+                println!("Opr : {:?}",val);
                 let mut v = st.borrow_mut();
                 let op1 = v.pop().unwrap();
                 let op2 = v.pop().unwrap();
-                v.push(add(op1,op2));
+                match *val {
+                    "+" => v.push(add(op1,op2)),
+                    "-" => v.push(sub(op1,op2)),
+                    "*" => v.push(mul(op1,op2)),
+                    "/" => v.push(div(op1,op2)),
+                    _ => {}
+                }
+                
                 AoType::Tkn(Box::new("void"))
             },
             AoType::Opr(val)  => {AoType::Tkn(Box::new("void"))}
-            AoType::Ass(val)  => {AoType::Tkn(Box::new("void"))}
-        }
-
+            AoType::Ass(val)  => {
+                for k in val.iter() {
+                    println!("Assignement : {:?}",&k);
+                    env.insert(k.to_string(), st.borrow_mut().pop().unwrap());   
+                }
+                AoType::Tkn(Box::new("void"))
+            },
+            AoType::Var(k) => {
+                println!("var : {:?}",&k);
+                match env.get(&k.to_string()) {
+                    Some(v) => {st.borrow_mut().push(v.clone())}
+                    None => {}
+                }
+                AoType::Tkn(Box::new("void"))},
+            //AoType::Tkn(Box::new("void")) => {AoType::Tkn(Box::new("void"))}
+            }
 }
 
 
@@ -153,14 +206,26 @@ fn main() {
     println!("AO start");
 
     //let mut i_lex4 = ao_var("12 13 'tkn \"str 1\"");
-    let mut i_lex4 = l_ao_all("1 2 3 (v1 w1 x1) 3");
+    let mut i_lex4 = l_ao_all("11 22 33 (v1 w1 x1) 44 $v1 $w1 $x1 + + *");
     println!("*************************************************");
-    if let Err(lex4) = i_lex4{
+    if let Err(ref lex4) = i_lex4{
         println!("lex4 KO");
     } else {
-        println!("lex4 OK : {:?}",&i_lex4.unwrap().1.0);
+        println!("lex4 OK : {:?}",&i_lex4.clone().unwrap().1.0);
     }
-    //println!("lex3 : {:?}",lex4);
+    
+    let mut env: HashMap<String,AoType> = HashMap::new();
+    let mut stack: Rc<RefCell<Vec<AoType>>> = Rc::new(RefCell::new(Vec::new()));
+
+    for v in i_lex4.unwrap().1.0{
+        println!("lex 4 eval : {:?}",eval(v,&mut env,Rc::clone(&stack)));
+        println!("lex4 stack : {:?}",&stack);
+        println!("lex4 env{:?}",&env);
+    }
+    println!("lex4 env{:?}",&env);
+    println!(">>>> lex4 stack FINALE : {:?} <<<<<<",&stack);
+    
+
     println!("*************************************************");
     
     let mut lex3 = ao_var("(112 113)");
@@ -174,7 +239,7 @@ fn main() {
     println!("*************************************************");
     
     let mut lex = l_ao_all("12 13 + 14 +");
-    let mut env: Vec<AoType> = Vec::new();
+    let mut env: HashMap<String,AoType> = HashMap::new();
     //let mut stack: Vec<AoType> = Vec::new();
     let mut stack: Rc<RefCell<Vec<AoType>>> = Rc::new(RefCell::new(Vec::new()));
 
