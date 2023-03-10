@@ -13,5 +13,8 @@ path="src/ao2.rs"
 [[bin]]
 name="ao3"
 path="src/ao3.rs"
+[[bin]]
+name="ao4"
+path="src/ao4.rs"
 [dependencies]
 nom = "7.1.3"
