@@ -24,6 +24,8 @@ pub enum  AoType<'a> {
     Opr(Box<&'a str>),
     Ass(Box<Vec<&'a str>>),
     Var(Box<&'a str>),
+    Cmd(Box<&'a str>),
+    Fct(Box<&'a str>),
 }
 
 type Res<T, U> = IResult<T, U, VerboseError<T>>;
@@ -53,6 +55,16 @@ fn typ_string(input: &str) -> Res<&str, AoType> {
     delimited(tag("\""), take_while(|x| x != '\"'), tag("\""))(input)
         .map(|(next_input, res)| {
             (next_input, AoType::Str(Box::new(res)))
+        })
+}
+
+
+fn ao_function(input: &str) -> Res<&str, AoType> {
+    delimited(tag("["), take_till(|x| x == ']'),tag("]"))(input)
+        .map(|(next_input, res)| {
+            println!("ao_function next_input : {:?}",next_input);
+            println!("ao_function res : {:?}",res);
+            (next_input, AoType::Fct(Box::new(res)))
         })
 }
 
@@ -92,7 +104,7 @@ fn ao_val(input: &str) -> Res<&str, AoType> {
 
 // 2ème étape
 fn ao_all(input: &str) -> Res<&str, AoType> {
-    alt((ao_operator,ao_var,ao_val,typ_string,typ_token,typ_int,))(input)
+    alt((ao_operator,ao_command,ao_function,ao_var,ao_val,typ_string,typ_token,typ_int,))(input)
 }
 
 // 1er étape
@@ -117,6 +129,13 @@ fn ao_operator(input: &str) -> Res<&str, AoType> {
         .map(|(next_input, res)| {
             (next_input, AoType::Opr(Box::new(res)))
         })
+}
+
+fn ao_command(input: &str) -> Res<&str, AoType> {
+    alt((tag("dup"),tag("eval")))(input)
+        .map(|(next_input, res)| {
+            (next_input, AoType::Cmd(Box::new(res)))
+        })        
 }
 
 // ==================== Arithmetique function ====================
@@ -191,9 +210,17 @@ fn eval<'a>(lex: AoType<'a>,env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<
                     Some(v) => {st.borrow_mut().push(v.clone())}
                     None => {}
                 }
-                AoType::Tkn(Box::new("void"))},
-            //AoType::Tkn(Box::new("void")) => {AoType::Tkn(Box::new("void"))}
+                AoType::Tkn(Box::new("void"))
+            },
+            AoType::Cmd(c) => {
+                println!("CMD : {:?}",c);
+                AoType::Tkn(Box::new("void"))
             }
+            AoType::Fct(_) => {
+                st.borrow_mut().push(lex);
+                AoType::Tkn(Box::new("void"))
+            }
+        }
 }
 
 
@@ -206,12 +233,13 @@ fn main() {
     println!("AO start");
 
     //let mut i_lex4 = ao_var("12 13 'tkn \"str 1\"");
-    let mut i_lex4 = l_ao_all("11 22 33 (v1 w1 x1) 44 $v1 $w1 $x1 + + *");
+    let mut i_lex4 = l_ao_all("11 22 33 (v1 w1 x1) 44 $v1 $w1 $x1 + + * dup");
     println!("*************************************************");
     if let Err(ref lex4) = i_lex4{
         println!("lex4 KO");
     } else {
         println!("lex4 OK : {:?}",&i_lex4.clone().unwrap().1.0);
+        println!("-----------------------------------------------");
     }
     
     let mut env: HashMap<String,AoType> = HashMap::new();
@@ -226,6 +254,19 @@ fn main() {
     println!(">>>> lex4 stack FINALE : {:?} <<<<<<",&stack);
 
     println!("*************************************************");
+
+
+    //let mut i_lex5 = l_ao_all("11 22 (x1 x2) $x1 $x2 [1 2 +] (add) ");
+    let mut i_lex5 = l_ao_all("[1 2 +] (add) 1 2 +");
+    println!("lex5 OK : {:?}",&i_lex5.clone().unwrap().1.0);
+    println!("-----------------------------------------------");
+    for v in i_lex5.unwrap().1.0{
+        println!("lex 5 eval : {:?}",eval(v,&mut env,Rc::clone(&stack)));
+        println!("lex5 stack : {:?}",&stack);
+        println!("lex5 env{:?}",&env);
+    }
+    println!(">>>> lex5 env FINAL2 {:?} <<<<<<",&env);
+    println!(">>>> lex5 stack FINALE 2 : {:?} <<<<<<",&stack);
 
 }
 
