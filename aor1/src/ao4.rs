@@ -125,11 +125,13 @@ fn l_ao_all(input: &str) -> Res<&str, (Vec<AoType>, Option<AoType>)> {
 }
 
 fn ao_operator(input: &str) -> Res<&str, AoType> {
-    alt((tag("+"),tag("-"),tag("*"),tag("/")))(input)
+    alt((tag("+"),tag("-"),tag("*"),tag("/"),tag(">"),tag("<")))(input)
         .map(|(next_input, res)| {
             (next_input, AoType::Opr(Box::new(res)))
         })
 }
+
+
 
 fn ao_command(input: &str) -> Res<&str, AoType> {
     alt((tag("dup"),tag("eval")))(input)
@@ -168,6 +170,24 @@ fn div<'b>(op1:AoType<'b>,op2:AoType<'b>) -> AoType<'b> {
 
     AoType::Int(Box::new(*i_op1 / *i_op2))
 }
+fn sup<'b>(op1:AoType<'b>,op2:AoType<'b>) -> AoType<'b> {
+
+    let AoType::Int(i_op1) = op1 else {panic!("add op1 wrong type")};
+    let AoType::Int(i_op2) = op2 else {panic!("add op2 wrong type")};
+    if i_op2 > i_op1 
+        {AoType::Int(Box::new(1))}
+    else 
+        {AoType::Int(Box::new(0))}
+}
+fn inf<'b>(op1:AoType<'b>,op2:AoType<'b>) -> AoType<'b> {
+
+    let AoType::Int(i_op1) = op1 else {panic!("add op1 wrong type")};
+    let AoType::Int(i_op2) = op2 else {panic!("add op2 wrong type")};
+    if i_op2 < i_op1 
+        {AoType::Int(Box::new(1))}
+    else 
+        {AoType::Int(Box::new(0))}
+}
 //fn eval<'c>(lex: AoType<'c>,env:&mut Vec<AoType<'c>>, stack:&mut Vec<AoType<'c>>) -> AoType<'c> {
 fn eval<'a>(lex: AoType<'a>,env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<Vec<AoType<'a>>>>) -> AoType<'a> {
 
@@ -191,6 +211,8 @@ fn eval<'a>(lex: AoType<'a>,env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<
                     "-" => v.push(sub(op1,op2)),
                     "*" => v.push(mul(op1,op2)),
                     "/" => v.push(div(op1,op2)),
+                    ">" => v.push(sup(op1,op2)),
+                    "<" => v.push(inf(op1,op2)),
                     _ => {}
                 }
                 
@@ -214,6 +236,13 @@ fn eval<'a>(lex: AoType<'a>,env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<
             },
             AoType::Cmd(c) => {
                 println!("CMD : {:?}",c);
+                if c.eq( &Box::new("eval") ) {
+                    let v = st.borrow_mut().pop().unwrap();
+                    match v {
+                        AoType::Fct(f) =>  interp(&f, env, Rc::clone(&st)),
+                        _ => {}
+                    }
+                };
                 AoType::Tkn(Box::new("void"))
             }
             AoType::Fct(_) => {
@@ -223,51 +252,50 @@ fn eval<'a>(lex: AoType<'a>,env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<
         }
 }
 
-
-fn test<'a>(s: Rc<RefCell<Vec<AoType<'a>>>>) {
-    s.borrow_mut().push(AoType::Str(Box::new("test")));
+fn interp<'a>(code:&'a str, env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<Vec<AoType<'a>>>>) {
+    let lex = l_ao_all(code);
+    if let Err(ref lex2) = lex{
+        println!("Syntax error");
+    }
+    else {
+        for v in lex.unwrap().1.0{
+            eval(v,env,Rc::clone(&st));
+        }
+    }
 }
 
 
 fn main() {
     println!("AO start");
-
-    //let mut i_lex4 = ao_var("12 13 'tkn \"str 1\"");
-    let mut i_lex4 = l_ao_all("11 22 33 (v1 w1 x1) 44 $v1 $w1 $x1 + + * dup");
-    println!("*************************************************");
-    if let Err(ref lex4) = i_lex4{
-        println!("lex4 KO");
-    } else {
-        println!("lex4 OK : {:?}",&i_lex4.clone().unwrap().1.0);
-        println!("-----------------------------------------------");
-    }
-    
     let mut env: HashMap<String,AoType> = HashMap::new();
     let mut stack: Rc<RefCell<Vec<AoType>>> = Rc::new(RefCell::new(Vec::new()));
 
-    for v in i_lex4.unwrap().1.0{
-        println!("lex 4 eval : {:?}",eval(v,&mut env,Rc::clone(&stack)));
-        println!("lex4 stack : {:?}",&stack);
-        println!("lex4 env{:?}",&env);
-    }
-    println!("lex4 env{:?}",&env);
-    println!(">>>> lex4 stack FINALE : {:?} <<<<<<",&stack);
+    //let mut i_lex4 = ao_var("12 13 'tkn \"str 1\"");
+    interp("11 22 33 (v1 w1 x1) 44 $v1 $w1 $x1 + + * dup",&mut env,Rc::clone(&stack));
+    println!("*********************test 1****************************");
 
-    println!("*************************************************");
+    println!("test 1 env{:?}",&env);
+    println!(">>>> test 1 stack FINALE : {:?} <<<<<<",&stack);
 
+    println!("*******************************************************");
 
     //let mut i_lex5 = l_ao_all("11 22 (x1 x2) $x1 $x2 [1 2 +] (add) ");
-    let mut i_lex5 = l_ao_all("[1 2 +] (add) 1 2 +");
-    println!("lex5 OK : {:?}",&i_lex5.clone().unwrap().1.0);
-    println!("-----------------------------------------------");
-    for v in i_lex5.unwrap().1.0{
-        println!("lex 5 eval : {:?}",eval(v,&mut env,Rc::clone(&stack)));
-        println!("lex5 stack : {:?}",&stack);
-        println!("lex5 env{:?}",&env);
-    }
-    println!(">>>> lex5 env FINAL2 {:?} <<<<<<",&env);
-    println!(">>>> lex5 stack FINALE 2 : {:?} <<<<<<",&stack);
+    //let mut i_lex5 = l_ao_all("[1 2 +] (add) 1 2 + $add");
+    interp("[(x) 10 $x *] (add) 1 2 + $add eval $add eval",&mut env,Rc::clone(&stack));
+    println!("*********************test 2****************************");
 
+    println!("test 2 env{:?}",&env);
+    println!(">>>> test 2 stack FINALE : {:?} <<<<<<",&stack);
+
+    println!("*******************************************************");
+
+    interp("10 2 > 7 6 <",&mut env,Rc::clone(&stack));
+    println!("*********************test 2****************************");
+
+    println!("test 2 env{:?}",&env);
+    println!(">>>> test 2 stack FINALE : {:?} <<<<<<",&stack);
+
+    println!("*******************************************************");
 }
 
 /*
