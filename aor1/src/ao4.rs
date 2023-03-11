@@ -2,7 +2,7 @@
 use nom::{
     branch::alt,
     bytes::complete::{tag, tag_no_case, take,take_till,take_while},
-    character::complete::{alpha1, digit1, alphanumeric1, one_of},
+    character::complete::{alpha1, digit1, alphanumeric1, one_of,multispace1},
     character::is_digit,
     combinator::{opt,map_parser},
     error::{context, ErrorKind, VerboseError},
@@ -26,6 +26,7 @@ pub enum  AoType<'a> {
     Var(Box<&'a str>),
     Cmd(Box<&'a str>),
     Fct(Box<&'a str>),
+    Spc,
 }
 
 type Res<T, U> = IResult<T, U, VerboseError<T>>;
@@ -102,9 +103,17 @@ fn ao_val(input: &str) -> Res<&str, AoType> {
     })
 }
 
+fn ao_space(input: &str) -> Res<&str, AoType> {
+    multispace1(input)
+    .map(|(next_input, mut res)| {
+        println!("ao_space : {:?}",res);
+        (next_input, AoType::Spc)
+    })
+}
+
 // 2ème étape
 fn ao_all(input: &str) -> Res<&str, AoType> {
-    alt((ao_operator,ao_command,ao_function,ao_var,ao_val,typ_string,typ_token,typ_int,))(input)
+    alt((ao_operator,ao_command,ao_function,ao_var,ao_val,typ_string,typ_token,typ_int))(input)
 }
 
 // 1er étape
@@ -115,8 +124,8 @@ fn l_ao_all(input: &str) -> Res<&str, (Vec<AoType>, Option<AoType>)> {
                opt(ao_all),
         )), 
     )(input).map(|(next_input, mut res)| {
-        println!("  lInteger next_input {:?}",next_input);
-        println!("  lInteger res {:?}",&res);
+        println!("  l_ao_all next_input {:?}",next_input);
+        println!("  l_ao_all res {:?}",&res);
         match &res.1 {
             Some(p) => res.0.push(p.clone()),
             None => {}
@@ -131,10 +140,8 @@ fn ao_operator(input: &str) -> Res<&str, AoType> {
         })
 }
 
-
-
 fn ao_command(input: &str) -> Res<&str, AoType> {
-    alt((tag("dup"),tag("eval")))(input)
+    alt((tag("dup"),tag("eval"),tag("if"),tag("while")))(input)
         .map(|(next_input, res)| {
             (next_input, AoType::Cmd(Box::new(res)))
         })        
@@ -154,7 +161,7 @@ fn sub<'b>(op1:AoType<'b>,op2:AoType<'b>) -> AoType<'b> {
     let AoType::Int(i_op1) = op1 else {panic!("add op1 wrong type")};
     let AoType::Int(i_op2) = op2 else {panic!("add op2 wrong type")};
 
-    AoType::Int(Box::new(*i_op1 - *i_op2))
+    AoType::Int(Box::new(*i_op2 - *i_op1))
 }
 fn mul<'b>(op1:AoType<'b>,op2:AoType<'b>) -> AoType<'b> {
 
@@ -168,7 +175,7 @@ fn div<'b>(op1:AoType<'b>,op2:AoType<'b>) -> AoType<'b> {
     let AoType::Int(i_op1) = op1 else {panic!("add op1 wrong type")};
     let AoType::Int(i_op2) = op2 else {panic!("add op2 wrong type")};
 
-    AoType::Int(Box::new(*i_op1 / *i_op2))
+    AoType::Int(Box::new(*i_op2 / *i_op1))
 }
 fn sup<'b>(op1:AoType<'b>,op2:AoType<'b>) -> AoType<'b> {
 
@@ -242,11 +249,58 @@ fn eval<'a>(lex: AoType<'a>,env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<
                         AoType::Fct(f) =>  interp(&f, env, Rc::clone(&st)),
                         _ => {}
                     }
-                };
+                }
+                else if c.eq(&Box::new("if")) {
+                    // do the if 
+                    let then = st.borrow_mut().pop().unwrap();
+                    let test = st.borrow_mut().pop().unwrap();
+                    match test {
+                        AoType::Fct(f) =>  interp(&f, env, Rc::clone(&st)),
+                        _ => {}
+                    }
+                    let res = st.borrow_mut().pop().unwrap();
+                    match res {
+                        AoType::Int(i) => {
+                            if i == Box::new(1) {
+                                match then {
+                                    AoType::Fct(f) =>  interp(&f, env, Rc::clone(&st)),
+                                    _ => {}
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                else if c.eq(&Box::new("while")) {
+                    // do the if 
+                    let corps = st.borrow_mut().pop().unwrap();
+                    let test = st.borrow_mut().pop().unwrap();
+                    loop {
+                        match &test {
+                            AoType::Fct(f) =>  interp(&f, env, Rc::clone(&st)),
+                            _ => {}
+                        }
+                        let res = st.borrow_mut().pop().unwrap();
+                        match res {
+                            AoType::Int(i) => {
+                                if i == Box::new(1) {
+                                    match &corps {
+                                        AoType::Fct(f) =>  interp(&f, env, Rc::clone(&st)),
+                                        _ => {}
+                                    }
+                                } else {break}
+                            }
+                            _ => {}
+                        }
+                    }
+                }
                 AoType::Tkn(Box::new("void"))
             }
             AoType::Fct(_) => {
                 st.borrow_mut().push(lex);
+                AoType::Tkn(Box::new("void"))
+            }
+            AoType::Spc => {
                 AoType::Tkn(Box::new("void"))
             }
         }
@@ -258,6 +312,7 @@ fn interp<'a>(code:&'a str, env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<
         println!("Syntax error");
     }
     else {
+        println!("analyse lexical :{:?}",&lex);
         for v in lex.unwrap().1.0{
             eval(v,env,Rc::clone(&st));
         }
@@ -296,6 +351,35 @@ fn main() {
     println!(">>>> test 2 stack FINALE : {:?} <<<<<<",&stack);
 
     println!("*******************************************************");
+
+    interp("[2 0 >] ['Done] if [0 0 >] ['Done2] if",&mut env,Rc::clone(&stack));
+    println!("*********************test 3****************************");
+
+    println!("test 3 env{:?}",&env);
+    println!(">>>> test 3 stack FINALE : {:?} <<<<<<",&stack);
+
+    println!("*******************************************************");
+
+    interp("10 (x5) $x5 1 - (x5) $x5 1 - (x5) $x5 1 - (x5) [(x6) $x6 1 -] (moinsun) $x5 $moinsun eval (x5) $x5 $moinsun eval (x5)",&mut env,Rc::clone(&stack));
+    //interp("10 (x5) 1 $x5 -",&mut env,Rc::clone(&stack));
+    println!("*********************test 4****************************");
+
+    println!("test 4 env{:?}",&env);
+    println!(">>>> test 4 stack FINALE : {:?} <<<<<<",&stack);
+
+    println!("*******************************************************");
+
+    interp("10 (x5) [$x5 0 >] [$x5 1 - (x5) 'wdone] while",&mut env,Rc::clone(&stack));
+    // sans expace : analyse lexical :Ok(("", ([Int(10), Ass(["x5"]), Fct("$x5 0 >"), Fct("$x5 1 - (x5) 'wdone"), Cmd("while")], Some(Cmd("while")))))
+    // avec espace : analyse lexical :Ok(("[$x5 0 >] [$x5 1 - (x5) 'wdone] while", ([Int(10), Ass(["x5"]), Spc], Some(Spc))))
+    //interp("10 (x5) 1 $x5 -",&mut env,Rc::clone(&stack));
+    println!("*********************test 5****************************");
+
+    println!("test 5 env{:?}",&env);
+    println!(">>>> test 5 stack FINALE : {:?} <<<<<<",&stack);
+
+    println!("*******************************************************");
+
 }
 
 /*
