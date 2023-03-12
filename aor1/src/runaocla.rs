@@ -7,6 +7,12 @@ use aoclalib::AoType;
 use aoclalib::interp;
 
 fn main() {
+   runapp();
+
+}
+
+pub fn runapp() {
+
     println!("AO start");
     let mut env: HashMap<String,AoType> = HashMap::new();
     let mut stack: Rc<RefCell<Vec<AoType>>> = Rc::new(RefCell::new(Vec::new()));
@@ -55,7 +61,11 @@ fn main() {
 
     println!("*******************************************************");
 
-    interp("10 (x5)    [$x5 0 >] [$x5 1 - (x5) 'wdone] while",&mut env,Rc::clone(&stack));
+    interp("10 (x5)    
+                  [$x5 0 >] 
+                  [$x5 1 - (x5) 
+                  'wdone] 
+                  while",&mut env,Rc::clone(&stack));
     // sans expace : analyse lexical :Ok(("", ([Int(10), Ass(["x5"]), Fct("$x5 0 >"), Fct("$x5 1 - (x5) 'wdone"), Cmd("while")], Some(Cmd("while")))))
     // avec espace : analyse lexical :Ok(("[$x5 0 >] [$x5 1 - (x5) 'wdone] while", ([Int(10), Ass(["x5"]), Spc], Some(Spc))))
     //interp("10 (x5) 1 $x5 -",&mut env,Rc::clone(&stack));
@@ -65,5 +75,4 @@ fn main() {
     println!(">>>> test 5 stack FINALE : {:?} <<<<<<",&stack);
 
     println!("*******************************************************");
-
 }

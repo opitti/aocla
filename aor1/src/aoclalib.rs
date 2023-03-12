@@ -16,6 +16,9 @@ use std::rc::Rc;
 
 use std::collections::HashMap;
 
+use std::fmt;
+
+
 #[derive(Debug,Clone)]
 pub enum  AoType<'a> {
     Str(Box<&'a str>),
@@ -27,6 +30,23 @@ pub enum  AoType<'a> {
     Cmd(Box<&'a str>),
     Fct(Box<&'a str>),
     Spc,
+}
+
+impl<'a> fmt::Display for AoType<'a>{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        //write!(f, "{:?}", self)
+        match self {
+            AoType::Ass(a) => {write!(f, "Ass {:?}", a)},
+            AoType::Str(a) => {write!(f, "Str {:?}", a)},
+            AoType::Tkn(a) => {write!(f, "Tkn {:?}", a)},
+            AoType::Int(a) => {write!(f, "Int {:?}", a)},
+            AoType::Opr(a) => {write!(f, "Opr {:?}", a)},
+            AoType::Var(a) => {write!(f, "Var {:?}", a)},
+            AoType::Cmd(a) => {write!(f, "Cmd {:?}", a)},
+            AoType::Fct(a) => {write!(f, "Fct [{:?}]", a)},
+            AoType::Spc => {write!(f, "")},
+        }
+    }
 }
 
 type Res<T, U> = IResult<T, U, VerboseError<T>>;
@@ -104,7 +124,7 @@ fn ao_val(input: &str) -> Res<&str, AoType> {
 }
 
 fn ao_space(input: &str) -> Res<&str, AoType> {
-    multispace1(input)
+   alt((tag("\n"),tag("\t"),multispace1))(input)
     .map(|(next_input, mut res)| {
         println!("ao_space : {:?}",res);
         (next_input, AoType::Spc)
@@ -123,7 +143,7 @@ fn l_ao_all(input: &str) -> Res<&str, (Vec<AoType>, Option<AoType>)> {
         tuple((many0(terminated( ao_all, ao_space)),
                opt(ao_all),
         )), 
-    )(input).map(|(next_input, mut res)| {
+    )(&input).map(|(next_input, mut res)| {
         println!("  l_ao_all next_input {:?}",next_input);
         println!("  l_ao_all res {:?}",&res);
         match &res.1 {
@@ -132,6 +152,23 @@ fn l_ao_all(input: &str) -> Res<&str, (Vec<AoType>, Option<AoType>)> {
         };
         (next_input,res) })
 }
+
+fn l_ao_all_box(input: &String) -> Res<&str, (Vec<AoType>, Option<AoType>)> {
+    context(
+        "l_ao_all",
+        tuple((many0(terminated( ao_all, ao_space)),
+               opt(ao_all),
+        )), 
+    )(&input).map(|(next_input, mut res)| {
+        println!("  l_ao_all next_input {:?}",next_input);
+        println!("  l_ao_all res {:?}",&res);
+        match &res.1 {
+            Some(p) => res.0.push(p.clone()),
+            None => {}
+        };
+        (next_input,res) })
+}
+
 
 fn ao_operator(input: &str) -> Res<&str, AoType> {
     alt((tag("+"),tag("-"),tag("*"),tag("/"),tag(">"),tag("<")))(input)
@@ -306,6 +343,117 @@ fn eval<'a>(lex: AoType<'a>,env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<
         }
 }
 
+fn eval_box<'a>(lex: Box<AoType<'a>>,env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<Vec<AoType<'a>>>>) -> AoType<'a> {
+
+    //let mut vec_ref = Rc::clone(st).borrow_mut();
+    //println!("start ==> {:?}",Rc::clone(&st).borrow_mut().pop());
+    //println!("start ==> {:?}",Rc::clone(&st).borrow_mut().pop());
+
+        match *lex {
+            AoType::Str(_)    => {st.borrow_mut().push(*lex);AoType::Tkn(Box::new("void"))},
+            AoType::Tkn(_)    => {st.borrow_mut().push(*lex);AoType::Tkn(Box::new("void"))},
+            AoType::Int(_)    => {st.borrow_mut().push(*lex);AoType::Tkn(Box::new("void"))},
+            
+            AoType::Opr(val)  => {
+                //AoType::Tkn(Box::new("void"));
+                println!("Opr : {:?}",val);
+                let mut v = st.borrow_mut();
+                let op1 = v.pop().unwrap();
+                let op2 = v.pop().unwrap();
+                match *val {
+                    "+" => v.push(add(op1,op2)),
+                    "-" => v.push(sub(op1,op2)),
+                    "*" => v.push(mul(op1,op2)),
+                    "/" => v.push(div(op1,op2)),
+                    ">" => v.push(sup(op1,op2)),
+                    "<" => v.push(inf(op1,op2)),
+                    _ => {}
+                }
+                
+                AoType::Tkn(Box::new("void"))
+            },
+            AoType::Opr(val)  => {AoType::Tkn(Box::new("void"))}
+            AoType::Ass(val)  => {
+                for k in val.iter() {
+                    println!("Assignement : {:?}",&k);
+                    env.insert(k.to_string(), st.borrow_mut().pop().unwrap());   
+                }
+                AoType::Tkn(Box::new("void"))
+            },
+            AoType::Var(k) => {
+                println!("var : {:?}",&k);
+                match env.get(&k.to_string()) {
+                    Some(v) => {st.borrow_mut().push(v.clone())}
+                    None => {}
+                }
+                AoType::Tkn(Box::new("void"))
+            },
+            AoType::Cmd(c) => {
+                println!("CMD : {:?}",c);
+                if c.eq( &Box::new("eval") ) {
+                    let v = st.borrow_mut().pop().unwrap();
+                    match v {
+                        AoType::Fct(f) =>  interp(&f, env, Rc::clone(&st)),
+                        _ => {}
+                    }
+                }
+                else if c.eq(&Box::new("if")) {
+                    // do the if 
+                    let then = st.borrow_mut().pop().unwrap();
+                    let test = st.borrow_mut().pop().unwrap();
+                    match test {
+                        AoType::Fct(f) =>  interp(&f, env, Rc::clone(&st)),
+                        _ => {}
+                    }
+                    let res = st.borrow_mut().pop().unwrap();
+                    match res {
+                        AoType::Int(i) => {
+                            if i == Box::new(1) {
+                                match then {
+                                    AoType::Fct(f) =>  interp(&f, env, Rc::clone(&st)),
+                                    _ => {}
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                else if c.eq(&Box::new("while")) {
+                    // do the if 
+                    let corps = st.borrow_mut().pop().unwrap();
+                    let test = st.borrow_mut().pop().unwrap();
+                    loop {
+                        match &test {
+                            AoType::Fct(f) =>  interp(&f, env, Rc::clone(&st)),
+                            _ => {}
+                        }
+                        let res = st.borrow_mut().pop().unwrap();
+                        match res {
+                            AoType::Int(i) => {
+                                if i == Box::new(1) {
+                                    match &corps {
+                                        AoType::Fct(f) =>  interp(&f, env, Rc::clone(&st)),
+                                        _ => {}
+                                    }
+                                } else {break}
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                AoType::Tkn(Box::new("void"))
+            }
+            AoType::Fct(_) => {
+                st.borrow_mut().push(*lex);
+                AoType::Tkn(Box::new("void"))
+            }
+            AoType::Spc => {
+                AoType::Tkn(Box::new("void"))
+            }
+        }
+}
+
+
 pub fn interp<'a>(code:&'a str, env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<Vec<AoType<'a>>>>) {
     let lex = l_ao_all(code);
     if let Err(ref lex2) = lex{
@@ -319,6 +467,18 @@ pub fn interp<'a>(code:&'a str, env:&mut HashMap<String,AoType<'a>>, st: Rc<RefC
     }
 }
 
+pub fn interp_box<'a>(code:&'a String, env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<Vec<AoType<'a>>>>) {
+    let lex = l_ao_all_box(code);
+    if let Err(ref lex2) = lex{
+        println!("Syntax error");
+    }
+    else {
+        println!("analyse lexical :{:?}",&lex);
+        for v in lex.unwrap().1.0{
+            eval_box(Box::new(v),env,Rc::clone(&st));
+        }
+    }
+}
 
 
 

@@ -16,6 +16,14 @@ use tui::style::{Style,Modifier,Color};
 
 use std::fs;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::collections::HashMap;
+
+mod aoclalib;
+use aoclalib::AoType;
+use aoclalib::interp_box;
+use aoclalib::interp;
 
 fn main() -> io::Result<()> {
     let stdout = io::stdout();
@@ -52,18 +60,19 @@ fn run_app<B: Backend>(term: &mut Terminal<B>) -> io::Result<()> {
             .title("Crossterm Minimal Example"),
     );
     
+    let mut env: HashMap<String,AoType> = HashMap::new();
+    let mut stack: Rc<RefCell<Vec<AoType>>> = Rc::new(RefCell::new(Vec::new()));
+    
 
     loop {
         let st = textarea.lines();
         let mut res:Vec<String> = Vec::new();
+        let mut rcode:String = String::new();
 
-        if st.len() > 0 {
-            res = st.iter()
-            .map(|s| s.len().to_string())
-            .collect::<Vec<String>>();
-        } else  {
-            res.push("0".to_string());
+        for st in stack.borrow().iter() {
+            res.push(format!("{}",st));
         }
+
         term.draw(|f| ui(f,&textarea,&res))?;
 
         match crossterm::event::read()?.into() {
@@ -75,6 +84,14 @@ fn run_app<B: Backend>(term: &mut Terminal<B>) -> io::Result<()> {
             } => {
                 std::fs::write("saved.txt", st.join("\n")).expect("failed to write to file");
             },
+            Input {
+                key: Key::Char('r'),
+                ctrl: true,
+                ..
+            } => {
+                 rcode = textarea.lines().join("\n");
+                call_interp(rcode.as_str(),&mut env,Rc::clone(&stack));
+            }
             input => {
                 textarea.input(input);
             }
@@ -84,6 +101,9 @@ fn run_app<B: Backend>(term: &mut Terminal<B>) -> io::Result<()> {
 
 }
 
+fn call_interp<'a>(code:&'a str, env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<Vec<AoType<'a>>>>){
+    interp(code,env,Rc::clone(&st))
+}
 
 fn ui<B: Backend>(f: &mut Frame<B>,textarea:&TextArea,stack:&Vec<String>) {
 
