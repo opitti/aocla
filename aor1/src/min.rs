@@ -90,7 +90,7 @@ fn run_app<B: Backend>(term: &mut Terminal<B>) -> io::Result<()> {
                 ..
             } => {
                  rcode = textarea.lines().join("\n");
-                call_interp(rcode.as_str(),&mut env,Rc::clone(&stack));
+                 call_interp(rcode.as_str(),&mut env,Rc::clone(&stack));
             }
             input => {
                 textarea.input(input);
@@ -101,7 +101,7 @@ fn run_app<B: Backend>(term: &mut Terminal<B>) -> io::Result<()> {
 
 }
 
-fn call_interp<'a>(code:&'a str, env:&mut HashMap<String,AoType<'a>>, st: Rc<RefCell<Vec<AoType<'a>>>>){
+fn call_interp(code:&str, env:&mut HashMap<String,AoType>, st: Rc<RefCell<Vec<AoType>>>){
     interp(code,env,Rc::clone(&st))
 }
 
