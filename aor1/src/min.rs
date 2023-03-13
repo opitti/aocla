@@ -30,7 +30,8 @@ fn main() -> io::Result<()> {
     let mut stdout = stdout.lock();
 
     enable_raw_mode()?;
-    crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    //crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    crossterm::execute!(stdout, EnterAlternateScreen, DisableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -73,7 +74,13 @@ fn run_app<B: Backend>(term: &mut Terminal<B>) -> io::Result<()> {
             res.push(format!("{}",st));
         }
 
-        term.draw(|f| ui(f,&textarea,&res))?;
+        let mut lenv: Vec<String> = Vec::new();
+
+        for (key, value) in &env {
+            lenv.push(format!("{} -> {}", key, value));
+        }
+
+        term.draw(|f| ui(f,&textarea,&res,&lenv))?;
 
         match crossterm::event::read()?.into() {
             Input { key: Key::Esc, .. } => {return Ok(());},
@@ -105,13 +112,14 @@ fn call_interp(code:&str, env:&mut HashMap<String,AoType>, st: Rc<RefCell<Vec<Ao
     interp(code,env,Rc::clone(&st))
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>,textarea:&TextArea,stack:&Vec<String>) {
+fn ui<B: Backend>(f: &mut Frame<B>,textarea:&TextArea,stack:&Vec<String>, env: &Vec<String>) {
 
     let chunks = Layout::default()
     .direction(Direction::Horizontal)
     .constraints(
         [
-            Constraint::Percentage(80),
+            Constraint::Percentage(60),
+            Constraint::Percentage(20),
             Constraint::Percentage(20),
         ]
         .as_ref(),
@@ -125,6 +133,12 @@ let mut spantext: Vec<Spans> = Vec::new();
 for st in stack.iter(){
     spantext.push(Spans::from(Span::styled(st,Style::default().add_modifier(Modifier::ITALIC))));
 }
+
+let mut spanenv: Vec<Spans> = Vec::new();
+for st2 in env.iter(){
+    spanenv.push(Spans::from(Span::styled(st2,Style::default().add_modifier(Modifier::ITALIC))));
+}
+
 /* 
 let text = vec![
     Spans::from(vec![
@@ -141,4 +155,12 @@ let para = Paragraph::new(spantext)
     .alignment(Alignment::Center)
     .wrap(Wrap { trim: true });
 f.render_widget(para, chunks[1]);
+
+
+let para2 = Paragraph::new(spanenv)
+    .block(Block::default().title("Vars").borders(Borders::ALL))
+    .style(Style::default().fg(Color::White).bg(Color::Blue))
+    .alignment(Alignment::Center)
+    .wrap(Wrap { trim: true });
+f.render_widget(para2, chunks[2]);
 }
