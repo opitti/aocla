@@ -4,18 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[[bin]]
-name="ao1"
-path="src/ao1.rs"
-[[bin]]
-name="ao2"
-path="src/ao2.rs"
-[[bin]]
-name="ao3"
-path="src/ao3.rs"
-[[bin]]
-name="ao4"
-path="src/ao4.rs"
 
 [[bin]]
 name="min"
@@ -24,6 +12,10 @@ path="src/min.rs"
 [[bin]]
 name="runaocla"
 path="src/runaocla.rs"
+
+[[bin]]
+name="test2"
+path="src/runtest2.rs"
 
 [dependencies]
 nom = "7.1.3"
