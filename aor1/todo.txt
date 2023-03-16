@@ -4,3 +4,121 @@
 ➔ ➜ ✎
 ░ ▒ ▓ 
 • ≃ ≋ ⊚ ⊙ 
+
+
+
+
+
+fn eval_box(lex: Box<AoType>,env:&mut HashMap<String,AoType>, st: Rc<RefCell<Vec<AoType>>>) -> AoType {
+ 
+    //let mut vec_ref = Rc::clone(st).borrow_mut();
+    //println!("start ==> {:?}",Rc::clone(&st).borrow_mut().pop());
+    //println!("start ==> {:?}",Rc::clone(&st).borrow_mut().pop());
+ 
+    match *lex {
+        AoType::Str(_)    => {st.borrow_mut().push(*lex);AoType::Tkn(Box::new(String::from("void")))},
+        AoType::Tkn(_)    => {st.borrow_mut().push(*lex);AoType::Tkn(Box::new(String::from("void")))},
+        AoType::Int(_)    => {st.borrow_mut().push(*lex);AoType::Tkn(Box::new(String::from("void")))},
+       
+        AoType::Opr(val)  => {
+            //AoType::Tkn(Box::new("void"));
+            if DEBUG {println!("Opr : {:?}",val);}
+            let mut v = st.borrow_mut();
+            let op1 = v.pop().unwrap();
+            let op2 = v.pop().unwrap();
+            match &*val.as_str() {
+                "+" => v.push(add(op1,op2)),
+                "-" => v.push(sub(op1,op2)),
+                "*" => v.push(mul(op1,op2)),
+                "/" => v.push(div(op1,op2)),
+                ">" => v.push(sup(op1,op2)),
+                "<" => v.push(inf(op1,op2)),
+                _ => {}
+            }
+           
+            AoType::Tkn(Box::new(String::from("void")))
+        },
+        AoType::Opr(val)  => {AoType::Tkn(Box::new(String::from("void")))}
+        AoType::Ass(val)  => {
+            for k in val.iter() {
+                if DEBUG {println!("Assignement : {:?}",&k);}
+                env.insert(k.to_string(), st.borrow_mut().pop().unwrap());  
+            }
+            AoType::Tkn(Box::new(String::from("void")))
+        },
+        AoType::Var(k) => {
+            if DEBUG {println!("var : {:?}",&k);}
+            match env.get(&k.to_string()) {
+                Some(v) => {st.borrow_mut().push(v.clone())}
+                None => {}
+            }
+            AoType::Tkn(Box::new(String::from("void")))
+        },
+        AoType::Cmd(c) => {
+            if DEBUG {println!("CMD : {:?}",c);}
+            if c.eq( &Box::new(String::from("eval")) ) {
+                let v = st.borrow_mut().pop().unwrap();
+                match v {
+                    AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
+                    _ => {}
+                }
+            }
+            else if c.eq(&Box::new(String::from("if"))) {
+                // do the if
+                let then = st.borrow_mut().pop().unwrap();
+                let test = st.borrow_mut().pop().unwrap();
+                match test {
+                    AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
+                    _ => {}
+                }
+                let res = st.borrow_mut().pop().unwrap();
+                match res {
+                    AoType::Int(i) => {
+                        if i == Box::new(1) {
+                            match then {
+                                AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
+                                _ => {}
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            else if c.eq(&Box::new(String::from("while"))) {
+                // do the if
+                let corps = st.borrow_mut().pop().unwrap();
+                let test = st.borrow_mut().pop().unwrap();
+                loop {
+                    match &test {
+                        AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
+                        _ => {}
+                    }
+                    let res = st.borrow_mut().pop().unwrap();
+                    match res {
+                        AoType::Int(i) => {
+                            if i == Box::new(1) {
+                                match &corps {
+                                    AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
+                                    _ => {}
+                                }
+                            } else {break}
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            AoType::Tkn(Box::new(String::from("void")))
+        }
+        AoType::Lst(_) => {
+            st.borrow_mut().push(*lex);
+            AoType::Tkn(Box::new(String::from("void")))
+        }
+        AoType::Fct(_) => {
+            st.borrow_mut().push(*lex);
+            AoType::Tkn(Box::new(String::from("void")))
+        }        
+        AoType::Spc => {
+            AoType::Tkn(Box::new(String::from("void")))
+        }
+    }
+}

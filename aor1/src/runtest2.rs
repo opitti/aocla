@@ -25,7 +25,7 @@ pub fn runapp() {
     let c = &res.unwrap().1.0.pop().unwrap();
     
     match c {
-      AoType::Fct(f) =>  {
+      AoType::Lst(f) =>  {
             println!("run : {:?}",&f);
             interp_AoType(&f,&mut env,Rc::clone(&stack));
             println!("Stack : {:?}",&stack);
