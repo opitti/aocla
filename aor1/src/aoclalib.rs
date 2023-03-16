@@ -29,12 +29,28 @@ pub enum  AoType {
     //Ass(Box<Vec<str>>),
     Ass(Vec<Box<String>>),
     Var(Box<String>),
-    Cmd(Box<String>),
+    //Cmd(Box<String>),
+    Cmd(AoKeyword),
     Fct(Box<String>),
     Lst(Vec<AoType>),
     Spc,
 }
- 
+
+#[derive(Debug,Clone)]
+pub enum AoKeyword {
+    Eval,
+    If,
+    While,
+}
+
+
+//  ████████ ██    ██ ██████  
+//     ██     ██  ██  ██   ██ 
+//     ██      ████   ██████  
+//     ██       ██    ██      
+//     ██       ██    ██      
+//                            
+//                            
 impl fmt::Display for AoType{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         //write!(f, "{:?}", self)
@@ -82,8 +98,23 @@ fn typ_string(input: &str) -> Res<&str, AoType> {
             (next_input, AoType::Str(Box::new(String::from(res))))
         })
 }
- 
 
+//      ██     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██ 
+//     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██  
+//    ██     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██   
+//   ██     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██    
+//  ██     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██     
+//                                                                               
+//                                                                               
+
+ 
+//   █████   ██████          ███████ ██    ██ ███    ██  ██████ ████████ ██  ██████  ███    ██ 
+//  ██   ██ ██    ██         ██      ██    ██ ████   ██ ██         ██    ██ ██    ██ ████   ██ 
+//  ███████ ██    ██         █████   ██    ██ ██ ██  ██ ██         ██    ██ ██    ██ ██ ██  ██ 
+//  ██   ██ ██    ██         ██      ██    ██ ██  ██ ██ ██         ██    ██ ██    ██ ██  ██ ██ 
+//  ██   ██  ██████  ███████ ██       ██████  ██   ████  ██████    ██    ██  ██████  ██   ████ 
+//                                                                                             
+//                                                                                             
 fn ao_function(input: &str) -> Res<&str, AoType> {
     delimited(tag("["), take_till(|x| x == ']'),tag("]"))(input)
         .map(|(next_input, res)| {
@@ -93,7 +124,13 @@ fn ao_function(input: &str) -> Res<&str, AoType> {
         })
 }
 
- 
+//   █████   ██████          ██    ██  █████  ██████  
+//  ██   ██ ██    ██         ██    ██ ██   ██ ██   ██ 
+//  ███████ ██    ██         ██    ██ ███████ ██████  
+//  ██   ██ ██    ██          ██  ██  ██   ██ ██   ██ 
+//  ██   ██  ██████  ███████   ████   ██   ██ ██   ██ 
+//                                                    
+//                                                     
 fn ao_var(input: &str) -> Res<&str, AoType> {
     if DEBUG {println!("ao_var input : |{}|",&input);}
     delimited(
@@ -120,7 +157,15 @@ fn ao_var(input: &str) -> Res<&str, AoType> {
         (next_input,ires_f)
     })
 }
- 
+
+
+//   █████   ██████          ██    ██  █████  ██      
+//  ██   ██ ██    ██         ██    ██ ██   ██ ██      
+//  ███████ ██    ██         ██    ██ ███████ ██      
+//  ██   ██ ██    ██          ██  ██  ██   ██ ██      
+//  ██   ██  ██████  ███████   ████   ██   ██ ███████ 
+//                                                    
+//                                                     
 fn ao_val(input: &str) -> Res<&str, AoType> {
     pair(tag("$"),alphanumeric1)(input).map(|(next_input, mut res)| {
         if DEBUG {println!("ao_val : {:?}",res);}
@@ -128,6 +173,12 @@ fn ao_val(input: &str) -> Res<&str, AoType> {
     })
 }
  
+//   █████   ██████          ███████ ██████   █████   ██████ ███████ 
+//  ██   ██ ██    ██         ██      ██   ██ ██   ██ ██      ██      
+//  ███████ ██    ██         ███████ ██████  ███████ ██      █████   
+//  ██   ██ ██    ██              ██ ██      ██   ██ ██      ██      
+//  ██   ██  ██████  ███████ ███████ ██      ██   ██  ██████ ███████ 
+//                                                                    
 fn ao_space(input: &str) -> Res<&str, AoType> {
    alt((tag("\n"),tag("\t"),multispace1))(input)
     .map(|(next_input, mut res)| {
@@ -136,6 +187,12 @@ fn ao_space(input: &str) -> Res<&str, AoType> {
     })
 }
  
+//   █████   ██████          ██      ███████ ████████ 
+//  ██   ██ ██    ██         ██      ██         ██    
+//  ███████ ██    ██         ██      ███████    ██    
+//  ██   ██ ██    ██         ██           ██    ██    
+//  ██   ██  ██████  ███████ ███████ ███████    ██    
+//                                                     
 fn ao_lst(input: &str) -> Res<&str, AoType> {
     println!("ao_lst : |{:?}|",&input);
     delimited(tag("["), l_ao_all ,tag("]"))(input)
@@ -161,15 +218,28 @@ fn ao_lst(input: &str) -> Res<&str, AoType> {
         })
 }
  
-// 2ème étape
-fn ao_all(input: &str) -> Res<&str, AoType> {
-    alt((ao_operator,ao_command,ao_lst,ao_var,ao_val,typ_string,typ_token,typ_int))(input)
-    //                        |----^----|
-    //                        ao_function
-    //alt((ao_operator,ao_command,ao_var,ao_val,typ_string,typ_token,typ_int))(input)
-}
+
  
-// 1er étape
+//      ▄▄▄▄      ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄       ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+//    ▄█░░░░▌    ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌     ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+//   ▐░░▌▐░░▌    ▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌     ▐░█▀▀▀▀▀▀▀▀▀  ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ 
+//    ▀▀ ▐░░▌    ▐░▌          ▐░▌       ▐░▌     ▐░▌               ▐░▌     ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          
+//       ▐░░▌    ▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌     ▐░█▄▄▄▄▄▄▄▄▄      ▐░▌     ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ 
+//       ▐░░▌    ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌     ▐░░░░░░░░░░░▌     ▐░▌     ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+//       ▐░░▌    ▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀█░█▀▀      ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌     ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
+//       ▐░░▌    ▐░▌          ▐░▌     ▐░▌       ▐░▌               ▐░▌     ▐░▌       ▐░▌▐░▌          ▐░▌          
+//   ▄▄▄▄█░░█▄▄▄ ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌      ▐░▌      ▐░█▄▄▄▄▄▄▄▄▄      ▐░▌     ▐░▌       ▐░▌▐░▌          ▐░█▄▄▄▄▄▄▄▄▄ 
+//  ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌     ▐░░░░░░░░░░░▌     ▐░▌     ▐░▌       ▐░▌▐░▌          ▐░░░░░░░░░░░▌
+//   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀       ▀▀▀▀▀▀▀▀▀▀▀       ▀       ▀         ▀  ▀            ▀▀▀▀▀▀▀▀▀▀▀ 
+//                                                                                                               
+//  ██╗              █████╗  ██████╗          █████╗ ██╗     ██╗     
+//  ██║             ██╔══██╗██╔═══██╗        ██╔══██╗██║     ██║     
+//  ██║             ███████║██║   ██║        ███████║██║     ██║     
+//  ██║             ██╔══██║██║   ██║        ██╔══██║██║     ██║     
+//  ███████╗███████╗██║  ██║╚██████╔╝███████╗██║  ██║███████╗███████╗
+//  ╚══════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝
+//                                                                   
+
 pub fn l_ao_all(input: &str) -> Res<&str, (Vec<AoType>, Option<AoType>)> {
     context(
         "l_ao_all",
@@ -186,40 +256,77 @@ pub fn l_ao_all(input: &str) -> Res<&str, (Vec<AoType>, Option<AoType>)> {
         (next_input,res) })
 }
  
-/*
-fn l_ao_all_box(input: &String) -> Res<&str, (Vec<AoType>, Option<AoType>)> {
-    context(
-        "l_ao_all",
-        tuple((many0(terminated( ao_all, ao_space)),
-               opt(ao_all),
-        )),
-    )(&input).map(|(next_input, mut res)| {
-        if DEBUG {println!("  l_ao_all next_input {:?}",next_input);}
-        if DEBUG {println!("  l_ao_all res {:?}",&res);}
-        match &res.1 {
-            Some(p) => res.0.push(p.clone()),
-            None => {}
-        };
-        (next_input,res) })
+// 2ème étape
+//   █████   ██████           █████  ██      ██      
+//  ██   ██ ██    ██         ██   ██ ██      ██      
+//  ███████ ██    ██         ███████ ██      ██      
+//  ██   ██ ██    ██         ██   ██ ██      ██      
+//  ██   ██  ██████  ███████ ██   ██ ███████ ███████ 
+//                                                   
+fn ao_all(input: &str) -> Res<&str, AoType> {
+    alt((ao_operator,ao_command,ao_lst,ao_var,ao_val,typ_string,typ_token,typ_int))(input)
+    //                        |----^----|
+    //                        ao_function
+    //alt((ao_operator,ao_command,ao_var,ao_val,typ_string,typ_token,typ_int))(input)
 }
-*/ 
- 
+
+//      ██     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██    ██  ██ 
+//     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██    ██  ██ 
+//    ██     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██    ██  ██ 
+//   ██     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██    ██  ██ 
+//  ██     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██    ██  ██   
+//                                                                               
+
+//                                                 __            
+//    ____ _____      ____  ____  ___  _________ _/ /_____  _____
+//   / __ `/ __ \    / __ \/ __ \/ _ \/ ___/ __ `/ __/ __ \/ ___/
+//  / /_/ / /_/ /   / /_/ / /_/ /  __/ /  / /_/ / /_/ /_/ / /    
+//  \__,_/\____/____\____/ .___/\___/_/   \__,_/\__/\____/_/     
+//            /_____/   /_/                                       
 fn ao_operator(input: &str) -> Res<&str, AoType> {
     alt((tag("+"),tag("-"),tag("*"),tag("/"),tag(">"),tag("<")))(input)
         .map(|(next_input, res)| {
             (next_input, AoType::Opr(Box::new(String::from(res))))
         })
 }
- 
+
+
+//   █████   ██████           ██████  ██████  ███    ███ ███    ███  █████  ███    ██ ██████  
+//  ██   ██ ██    ██         ██      ██    ██ ████  ████ ████  ████ ██   ██ ████   ██ ██   ██ 
+//  ███████ ██    ██         ██      ██    ██ ██ ████ ██ ██ ████ ██ ███████ ██ ██  ██ ██   ██ 
+//  ██   ██ ██    ██         ██      ██    ██ ██  ██  ██ ██  ██  ██ ██   ██ ██  ██ ██ ██   ██ 
+//  ██   ██  ██████  ███████  ██████  ██████  ██      ██ ██      ██ ██   ██ ██   ████ ██████  
+//                                                                                            
+//                                                                                            
+
 fn ao_command(input: &str) -> Res<&str, AoType> {
-    alt((tag("dup"),tag("eval"),tag("if"),tag("while")))(input)
+    alt((tag("eval"),tag("if"),tag("while")))(input)
         .map(|(next_input, res)| {
-            (next_input, AoType::Cmd(Box::new(String::from(res))))
+            if DEBUG {println!(" ao_command next_input {:?}",next_input);}
+            if DEBUG {println!(" ao_command res {:?}",&res);}
+            (next_input, AoType::Cmd(ao_Keyword_Cmd(res).unwrap().1))
         })       
-}
- 
-// ==================== Arithmetique function ====================
- 
+} 
+
+fn ao_Keyword_Cmd(input: &str) -> Res<&str, AoKeyword> { alt((ao_Keyword_Cmd_while,ao_Keyword_Cmd_if,ao_Keyword_Cmd_eval))(input)}
+fn ao_Keyword_Cmd_while(input: &str) -> Res<&str, AoKeyword> { tag("while")(input).map(|(next_input, res)| {(next_input, AoKeyword::While)}) }
+fn ao_Keyword_Cmd_eval(input: &str) -> Res<&str, AoKeyword>  { tag("eval")(input).map(|(next_input, res)| {(next_input, AoKeyword::Eval)}) }
+fn ao_Keyword_Cmd_if(input: &str) -> Res<&str, AoKeyword>    { tag("if")(input).map(|(next_input, res)| {(next_input, AoKeyword::If)}) }
+
+//   ______________________________________________________________________________
+//  /_____/_____/_____/_____/_____/_____/_____/_____/_____/_____/_____/_____/_____/                                                                                                                                                              
+//      ___         _ __  __                   __  _                     
+//     /   |  _____(_) /_/ /_  ____ ___  ___  / /_(_)___ ___  _____      
+//    / /| | / ___/ / __/ __ \/ __ `__ \/ _ \/ __/ / __ `/ / / / _ \     
+//   / ___ |/ /  / / /_/ / / / / / / / /  __/ /_/ / /_/ / /_/ /  __/     
+//  /_/ _|_/_/  /_/\__/_/ /_/_/ /_/ /_/\___/\__/_/\__, /\__,_/\___/      
+//     / __/_  ______  _____/ /_(_)___  ____        /_/                  
+//    / /_/ / / / __ \/ ___/ __/ / __ \/ __ \                            
+//   / __/ /_/ / / / / /__/ /_/ / /_/ / / / /                            
+//  /_/  \__,_/_/ /_/\___/\__/_/\____/_/ /_/                             
+//   ______________________________________________________________________________
+//  /_____/_____/_____/_____/_____/_____/_____/_____/_____/_____/_____/_____/_____/
+//                                                                                 
 fn add(op1:AoType,op2:AoType) -> AoType {
  
     let AoType::Int(i_op1) = op1 else {panic!("add op1 wrong type")};
@@ -266,6 +373,22 @@ fn inf(op1:AoType,op2:AoType) -> AoType {
     else
         {AoType::Int(Box::new(0))}
 }
+
+//                                                              
+//                                                              
+//  █████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗
+//  ╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝
+//
+//  ███████╗██╗   ██╗ █████╗ ██╗     
+//  ██╔════╝██║   ██║██╔══██╗██║     
+//  █████╗  ██║   ██║███████║██║     
+//  ██╔══╝  ╚██╗ ██╔╝██╔══██║██║     
+//  ███████╗ ╚████╔╝ ██║  ██║███████╗
+//  ╚══════╝  ╚═══╝  ╚═╝  ╚═╝╚══════╝
+//                                                              
+//  █████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗
+//  ╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝``
+
 //fn eval<'c>(lex: AoType<'c>,env:&mut Vec<AoType<'c>>, stack:&mut Vec<AoType<'c>>) -> AoType<'c> {
 fn eval(lex: AoType,env:&mut HashMap<String,AoType>, st: Rc<RefCell<Vec<AoType>>>) -> AoType {
  
@@ -329,41 +452,23 @@ fn eval(lex: AoType,env:&mut HashMap<String,AoType>, st: Rc<RefCell<Vec<AoType>>
                 AoType::Tkn(Box::new(String::from("void")))
             },
             AoType::Cmd(c) => {
-                if DEBUG {println!("Eval CMD : {:?}",c);}
-                if c.eq( &Box::new(String::from("eval")) ) {
-                    let v = st.borrow_mut().pop().unwrap();
-                    match v {
-                        AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
-                        _ => {}
-                    }
-                }
-                else if c.eq(&Box::new(String::from("if"))) {
-                    // do the if
-                    let then = st.borrow_mut().pop().unwrap();
-                    let test = st.borrow_mut().pop().unwrap();
-                    match test {
-                        AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
-                        _ => {}
-                    }
-                    let res = st.borrow_mut().pop().unwrap();
-                    match res {
-                        AoType::Int(i) => {
-                            if i == Box::new(1) {
-                                match then {
-                                    AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
-                                    _ => {}
-                                }
-                            }
+                match c {
+                    
+                    //if c.eq( &Box::new(String::from("eval")) ) {
+                    AoKeyword::Eval => {
+                        if DEBUG {println!("Eval CMD : {:?}",c);}
+                        let v = st.borrow_mut().pop().unwrap();
+                        match v {
+                            AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
+                            _ => {}
                         }
-                        _ => {}
                     }
-                }
-                else if c.eq(&Box::new(String::from("while"))) {
-                    // do the if
-                    let corps = st.borrow_mut().pop().unwrap();
-                    let test = st.borrow_mut().pop().unwrap();
-                    loop {
-                        match &test {
+                    //else if c.eq(&Box::new(String::from("if"))) {
+                    AoKeyword::If => {
+                        // do the if
+                        let then = st.borrow_mut().pop().unwrap();
+                        let test = st.borrow_mut().pop().unwrap();
+                        match test {
                             AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
                             _ => {}
                         }
@@ -371,17 +476,41 @@ fn eval(lex: AoType,env:&mut HashMap<String,AoType>, st: Rc<RefCell<Vec<AoType>>
                         match res {
                             AoType::Int(i) => {
                                 if i == Box::new(1) {
-                                    match &corps {
+                                    match then {
                                         AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
                                         _ => {}
                                     }
-                                } else {break}
+                                }
                             }
                             _ => {}
                         }
                     }
-                }
-                AoType::Tkn(Box::new(String::from("void")))
+                    //else if c.eq(&Box::new(String::from("while"))) {
+                    AoKeyword::While => {
+                        let corps = st.borrow_mut().pop().unwrap();
+                        let test = st.borrow_mut().pop().unwrap();
+                        loop {
+                            match &test {
+                                AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
+                                _ => {}
+                            }
+                            let res = st.borrow_mut().pop().unwrap();
+                            match res {
+                                AoType::Int(i) => {
+                                    if i == Box::new(1) {
+                                        match &corps {
+                                            AoType::Lst(f) =>  interp_AoType(&f, env, Rc::clone(&st)),
+                                            _ => {}
+                                        }
+                                    } else {break}
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    
+                };
+                AoType::Tkn(Box::new(String::from("void")))   
             }
             AoType::Lst(_) => {
                 if DEBUG {println!("Eval Fct on stack");}
@@ -402,7 +531,13 @@ fn eval(lex: AoType,env:&mut HashMap<String,AoType>, st: Rc<RefCell<Vec<AoType>>
  
 
  
- 
+//  ██ ███    ██ ████████ ███████ ██████  ██████  
+//  ██ ████   ██    ██    ██      ██   ██ ██   ██ 
+//  ██ ██ ██  ██    ██    █████   ██████  ██████  
+//  ██ ██  ██ ██    ██    ██      ██   ██ ██      
+//  ██ ██   ████    ██    ███████ ██   ██ ██      
+//                                                
+//                                                 
 pub fn interp(code:&str, env:&mut HashMap<String,AoType>, st: Rc<RefCell<Vec<AoType>>>) {
     let lex = l_ao_all(code);
     if let Err(ref lex2) = lex{

@@ -31,15 +31,17 @@ pub fn runapp() {
             println!("Stack : {:?}",&stack);
    }
       _ => {
-         //interp("1 2 + [3 3 +] (x) $x eval 4 +",&mut env,Rc::clone(&stack));
+         interp("1 2 + [3 3 +] (x) $x eval 4 +",&mut env,Rc::clone(&stack));
          println!("Stack : {:?}",&stack);
 
+/* 
          interp("10 (x5)    
                   [$x5 0 >] 
                   [$x5 1 - (x5) 
                   'wdone] 
                   while",&mut env,Rc::clone(&stack));
          println!("Stack : {:?}",&stack);
+         */
       }
    };
    
