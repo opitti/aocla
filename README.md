@@ -8,6 +8,8 @@ align_try_list <- align <- main
 Copy of main before change on align. Objective to be more align with the main version. 
 beforepurge <- main 
 
+# the main reference 
+
 ## Aocla overview
 
 Aocla is a very simple language, more similar to Joy than to FORTH (higher level). It has a total of six datatypes:
