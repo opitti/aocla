@@ -1,3 +1,6 @@
+Every thing here is base on https://github.com/antirez/aocla
+Objective : understand what has been written by antirez and why not learn nom and tui
+
 ## Aocla overview
 
 Aocla is a very simple language, more similar to Joy than to FORTH (higher level). It has a total of six datatypes:
@@ -105,21 +108,10 @@ The words `if` and `ifelse` do what you could imagine:
 There is a problem with the above implementation of `repeat`, it does
 not mix well with local variables. The following program will not have the expected behavior:
 
-    aocla> 10 (x) 3 [$x printnl] repeat
+    10 (x) 3 [$x printnl] repeat
     Unbound local var: '$x' in eval:0  in unknown:0
 
-NOTE : 
-Here the problem is that once we call a new procedure, that is `repeat`,
-the local variable `x` no longer exists in the context of the called
-procedure. It belongs to the previous procedure, that is, in this specific
-case, the *top level* execution stack frame. So when `repeat` evaluates our
-program we get an error.
 
-This is the only case where Aocla local variables make the semantics of
-Aocla more complex than other stack based languages without this feature.
-In order to solve the problem above, Aocla has a special form of
-`eval` called `upeval`: it executes a program in the context
-(again, stack frame, in low level terms) of the caller. Let's rewrite
 the `repeat` procedure using `upeval`:
 
     [(n l)
