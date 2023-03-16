@@ -1,7 +1,7 @@
 Every thing here is base on https://github.com/antirez/aocla
 Objective : understand what has been written by antirez and why not learn nom and tui
 
-##branch 
+## branching
 working branch today : align_try_list
 align_try_list <- align <- main
 
