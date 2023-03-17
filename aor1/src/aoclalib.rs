@@ -1,23 +1,19 @@
 //use std::borrow::BorrowMut;
 use nom::{
     branch::alt,
-    bytes::complete::{tag, tag_no_case, take, take_till, take_while, take_while1},
-    character::complete::{alpha1, alphanumeric0, alphanumeric1, digit1, multispace1, one_of},
-    character::is_digit,
-    combinator::{map_parser, opt},
-    error::{context, ErrorKind, VerboseError},
-    multi::{count, many0, many1, many_m_n},
-    sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
-    AsChar, Err as NomErr, IResult, InputTakeAtPosition,
+    bytes::complete::{tag, take_till, take_while},
+    character::complete::{alpha1, alphanumeric0, alphanumeric1, multispace1},
+    combinator::opt,
+    error::{context, VerboseError},
+    multi::many0,
+    sequence::{delimited, pair, preceded, terminated, tuple},
+    IResult,
 };
 
 use std::cell::RefCell;
-use std::rc::Rc;
-
 use std::collections::HashMap;
-
 use std::fmt;
-
+use std::rc::Rc;
 static DEBUG: bool = true;
 
 #[derive(Debug, Clone)]
@@ -26,12 +22,9 @@ pub enum AoType {
     Tkn(Box<String>),
     Int(Box<i32>),
     Opr(Box<String>),
-    //Ass(Box<Vec<str>>),
     Ass(Vec<Box<String>>),
     Var(Box<String>),
-    //Cmd(Box<String>),
     Cmd(AoKeyword),
-    //Fct(Box<String>),
     Fct(Vec<AoType>),
     Lst(Vec<AoType>),
     Spc,
@@ -170,7 +163,7 @@ fn ao_var(input: &str) -> Res<&str, AoType> {
         )),
         tag(")"),
     )(input)
-    .map(|(next_input, mut res)| {
+    .map(|(next_input, res)| {
         if DEBUG {
             println!("ao_var next_input {:?}", &next_input);
         }
@@ -227,7 +220,7 @@ fn ao_val(input: &str) -> Res<&str, AoType> {
         tuple((alpha1, alphanumeric0)),
         pair(tag("$"), alphanumeric1),
     ))(input)
-    .map(|(next_input, mut res)| {
+    .map(|(next_input, res)| {
         if DEBUG {
             println!("ao_val next_input : {:?}", next_input);
         }
@@ -254,7 +247,7 @@ fn ao_val(input: &str) -> Res<&str, AoType> {
 //  ██   ██  ██████  ███████ ███████ ██      ██   ██  ██████ ███████
 //
 fn ao_space(input: &str) -> Res<&str, AoType> {
-    alt((tag("\n"), tag("\t"), multispace1))(input).map(|(next_input, mut res)| {
+    alt((tag("\n"), tag("\t"), multispace1))(input).map(|(next_input, res)| {
         if DEBUG {
             println!("ao_space : {:?}", res);
         }
@@ -364,11 +357,11 @@ fn ao_all(input: &str) -> Res<&str, AoType> {
     //alt((ao_operator,ao_command,ao_var,ao_val,typ_string,typ_token,typ_int))(input)
 }
 
-//      ██     ██     ██     ██     ██     ██     ██     ██     ██     ██   ██  ██  ██
-//     ██     ██     ██     ██     ██     ██     ██     ██     ██     ██   ██  ██  ██
-//    ██     ██     ██     ██     ██     ██     ██     ██     ██     ██   ██  ██  ██
-//   ██     ██     ██     ██     ██     ██     ██     ██     ██     ██   ██  ██  ██
-//  ██     ██     ██     ██     ██     ██     ██     ██     ██     ██   ██  ██  ██
+//      ██       ██      ██        ██      ██      ██     ██    ██    ██    ██   ██  ██  ██
+//     ██       ██      ██       ██       ██      ██     ██    ██    ██    ██   ██  ██  ██
+//    ██       ██      ██      ██       ██      ██     ██    ██    ██    ██   ██  ██  ██
+//   ██       ██      ██     ██       ██      ██     ██    ██    ██    ██   ██  ██  ██
+//  ██       ██      ██     ██       ██     ██     ██    ██    ██    ██   ██  ██  ██
 //
 
 //                                                 __
@@ -398,29 +391,29 @@ fn ao_command(input: &str) -> Res<&str, AoType> {
         if DEBUG {
             println!(" ao_command res {:?}", &res);
         }
-        (next_input, AoType::Cmd(ao_Keyword_Cmd(res).unwrap().1))
+        (next_input, AoType::Cmd(ao_keyword_cmd(res).unwrap().1))
     })
 }
 
-fn ao_Keyword_Cmd(input: &str) -> Res<&str, AoKeyword> {
+fn ao_keyword_cmd(input: &str) -> Res<&str, AoKeyword> {
     alt((
-        ao_Keyword_Cmd_while,
-        ao_Keyword_Cmd_if,
-        ao_Keyword_Cmd_eval,
-        ao_Keyword_Cmd_def,
+        ao_keyword_cmd_while,
+        ao_keyword_cmd_if,
+        ao_keyword_cmd_eval,
+        ao_keyword_cmd_def,
     ))(input)
 }
-fn ao_Keyword_Cmd_while(input: &str) -> Res<&str, AoKeyword> {
-    tag("while")(input).map(|(next_input, res)| (next_input, AoKeyword::While))
+fn ao_keyword_cmd_while(input: &str) -> Res<&str, AoKeyword> {
+    tag("while")(input).map(|(next_input, _res)| (next_input, AoKeyword::While))
 }
-fn ao_Keyword_Cmd_eval(input: &str) -> Res<&str, AoKeyword> {
-    tag("eval")(input).map(|(next_input, res)| (next_input, AoKeyword::Eval))
+fn ao_keyword_cmd_eval(input: &str) -> Res<&str, AoKeyword> {
+    tag("eval")(input).map(|(next_input, _res)| (next_input, AoKeyword::Eval))
 }
-fn ao_Keyword_Cmd_if(input: &str) -> Res<&str, AoKeyword> {
-    tag("if")(input).map(|(next_input, res)| (next_input, AoKeyword::If))
+fn ao_keyword_cmd_if(input: &str) -> Res<&str, AoKeyword> {
+    tag("if")(input).map(|(next_input, _res)| (next_input, AoKeyword::If))
 }
-fn ao_Keyword_Cmd_def(input: &str) -> Res<&str, AoKeyword> {
-    tag("def")(input).map(|(next_input, res)| (next_input, AoKeyword::Def))
+fn ao_keyword_cmd_def(input: &str) -> Res<&str, AoKeyword> {
+    tag("def")(input).map(|(next_input, _res)| (next_input, AoKeyword::Def))
 }
 
 //   ______________________________________________________________________________
@@ -547,12 +540,6 @@ fn eval(lex: AoType, env: &mut HashMap<String, AoType>, st: Rc<RefCell<Vec<AoTyp
 
             AoType::Tkn(Box::new(String::from("void")))
         }
-        AoType::Opr(val) => {
-            if DEBUG {
-                println!("Eval(Opr_)");
-            }
-            AoType::Tkn(Box::new(String::from("void")))
-        }
         AoType::Ass(val) => {
             for k in val.iter() {
                 if DEBUG {
@@ -574,7 +561,7 @@ fn eval(lex: AoType, env: &mut HashMap<String, AoType>, st: Rc<RefCell<Vec<AoTyp
                 Some(v) => {
                     // MATCH AoType HERE !!!!!!!!!
                     match v {
-                        AoType::Fct(f) => {
+                        AoType::Fct(_) => {
                             eval(v.clone(), env, Rc::clone(&st));
                         }
                         _ => {
@@ -598,7 +585,7 @@ fn eval(lex: AoType, env: &mut HashMap<String, AoType>, st: Rc<RefCell<Vec<AoTyp
                     }
                     let v = st.borrow_mut().pop().unwrap();
                     match v {
-                        AoType::Lst(f) => interp_AoType(&f, env, Rc::clone(&st)),
+                        AoType::Lst(f) => interp_ao_type(&f, env, Rc::clone(&st)),
                         _ => {}
                     }
                 }
@@ -608,7 +595,7 @@ fn eval(lex: AoType, env: &mut HashMap<String, AoType>, st: Rc<RefCell<Vec<AoTyp
                     let then = st.borrow_mut().pop().unwrap();
                     let test = st.borrow_mut().pop().unwrap();
                     match test {
-                        AoType::Lst(f) => interp_AoType(&f, env, Rc::clone(&st)),
+                        AoType::Lst(f) => interp_ao_type(&f, env, Rc::clone(&st)),
                         _ => {}
                     }
                     let res = st.borrow_mut().pop().unwrap();
@@ -616,7 +603,7 @@ fn eval(lex: AoType, env: &mut HashMap<String, AoType>, st: Rc<RefCell<Vec<AoTyp
                         AoType::Int(i) => {
                             if i == Box::new(1) {
                                 match then {
-                                    AoType::Lst(f) => interp_AoType(&f, env, Rc::clone(&st)),
+                                    AoType::Lst(f) => interp_ao_type(&f, env, Rc::clone(&st)),
                                     _ => {}
                                 }
                             }
@@ -630,7 +617,7 @@ fn eval(lex: AoType, env: &mut HashMap<String, AoType>, st: Rc<RefCell<Vec<AoTyp
                     let test = st.borrow_mut().pop().unwrap();
                     loop {
                         match &test {
-                            AoType::Lst(f) => interp_AoType(&f, env, Rc::clone(&st)),
+                            AoType::Lst(f) => interp_ao_type(&f, env, Rc::clone(&st)),
                             _ => {}
                         }
                         let res = st.borrow_mut().pop().unwrap();
@@ -638,7 +625,7 @@ fn eval(lex: AoType, env: &mut HashMap<String, AoType>, st: Rc<RefCell<Vec<AoTyp
                             AoType::Int(i) => {
                                 if i == Box::new(1) {
                                     match &corps {
-                                        AoType::Lst(f) => interp_AoType(&f, env, Rc::clone(&st)),
+                                        AoType::Lst(f) => interp_ao_type(&f, env, Rc::clone(&st)),
                                         _ => {}
                                     }
                                 } else {
@@ -681,7 +668,7 @@ fn eval(lex: AoType, env: &mut HashMap<String, AoType>, st: Rc<RefCell<Vec<AoTyp
                 println!("Eval Fct on stack");
             }
             //st.borrow_mut().push(lex);
-            interp_AoType(&f, env, Rc::clone(&st));
+            interp_ao_type(&f, env, Rc::clone(&st));
             AoType::Tkn(Box::new(String::from("void")))
         }
         AoType::Spc => {
@@ -702,7 +689,7 @@ fn eval(lex: AoType, env: &mut HashMap<String, AoType>, st: Rc<RefCell<Vec<AoTyp
 //
 pub fn interp(code: &str, env: &mut HashMap<String, AoType>, st: Rc<RefCell<Vec<AoType>>>) {
     let lex = l_ao_all(code);
-    if let Err(ref lex2) = lex {
+    if let Err(ref _lex2) = lex {
         if DEBUG {
             println!("Syntax error");
         }
@@ -716,7 +703,7 @@ pub fn interp(code: &str, env: &mut HashMap<String, AoType>, st: Rc<RefCell<Vec<
     }
 }
 
-pub fn interp_AoType(
+pub fn interp_ao_type(
     code: &Vec<AoType>,
     env: &mut HashMap<String, AoType>,
     st: Rc<RefCell<Vec<AoType>>>,

@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 mod aoclalib;
 use aoclalib::interp;
-use aoclalib::interp_AoType;
+use aoclalib::interp_ao_type;
 use aoclalib::l_ao_all;
 use aoclalib::AoType;
 

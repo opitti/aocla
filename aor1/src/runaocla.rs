@@ -13,7 +13,7 @@ fn main() {
 pub fn runapp() {
     println!("AO start");
     let mut env: HashMap<String, AoType> = HashMap::new();
-    let mut stack: Rc<RefCell<Vec<AoType>>> = Rc::new(RefCell::new(Vec::new()));
+    let stack: Rc<RefCell<Vec<AoType>>> = Rc::new(RefCell::new(Vec::new()));
 
     //let mut i_lex4 = ao_var("12 13 'tkn \"str 1\"");
     //interp("11 22 33 (v1 w1 x1) 44 $v1 $w1 $x1 + + * dup",&mut env,Rc::clone(&stack));
