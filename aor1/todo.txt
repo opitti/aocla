@@ -6,8 +6,30 @@
 • ≃ ≋ ⊚ ⊙ 
 
 
+Cmd
+
+    eval, while, if
 
 
+----------------------------------------------------------------------------------------------------
+
+//   █████   ██████          ███████ ██    ██ ███    ██  ██████ ████████ ██  ██████  ███    ██ 
+//  ██   ██ ██    ██         ██      ██    ██ ████   ██ ██         ██    ██ ██    ██ ████   ██ 
+//  ███████ ██    ██         █████   ██    ██ ██ ██  ██ ██         ██    ██ ██    ██ ██ ██  ██ 
+//  ██   ██ ██    ██         ██      ██    ██ ██  ██ ██ ██         ██    ██ ██    ██ ██  ██ ██ 
+//  ██   ██  ██████  ███████ ██       ██████  ██   ████  ██████    ██    ██  ██████  ██   ████ 
+//                                                                                             
+//                                                                                             
+fn ao_function(input: &str) -> Res<&str, AoType> {
+    delimited(tag("["), take_till(|x| x == ']'),tag("]"))(input)
+        .map(|(next_input, res)| {
+            if DEBUG {println!("ao_function next_input : {:?}",next_input);}
+            if DEBUG {println!("ao_function res : {:?}",res);}
+            (next_input, AoType::Fct(Box::new(String::from(res))))
+        })
+}
+
+----------------------------------------------------------------------------------------------------
 
 fn eval_box(lex: Box<AoType>,env:&mut HashMap<String,AoType>, st: Rc<RefCell<Vec<AoType>>>) -> AoType {
  

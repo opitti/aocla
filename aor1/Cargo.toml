@@ -17,6 +17,14 @@ path="src/runaocla.rs"
 name="test2"
 path="src/runtest2.rs"
 
+[[bin]]
+name="test3"
+path="src/runtest3.rs"
+
+[[bin]]
+name="t1"
+path="src/t1.rs"
+
 [dependencies]
 nom = "7.1.3"
 
