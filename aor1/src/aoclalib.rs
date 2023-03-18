@@ -644,10 +644,6 @@ fn eval(lex: AoType, env: &mut HashMap<String, AoType>, st: Rc<RefCell<Vec<AoTyp
                     println!("lcorps : {:?}", lcorps);
                     match lvar {
                         AoType::Tkn(lv) | AoType::Var(lv) => {
-                            // ici dans l'insert ilfaut faire de la liste une fonction
-                            // comme ça l'or de l'insertion dans la pile on executera la liste
-                            // on fait l'eval dans l'évaluation de AoType::Var (match)
-                            // check the type before the unwrap()
                             env.insert(*lv, lcorps.to_fct().unwrap());
                         }
                         _ => {}
